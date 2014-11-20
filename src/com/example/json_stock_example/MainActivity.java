@@ -53,6 +53,40 @@ public class MainActivity extends ActionBarActivity {
 	int buttonClicked=0;
 	Thread t;
 	
+	final Handler showContent = new Handler(new Handler.Callback() {
+		
+		@Override
+		public boolean handleMessage(Message msg) {
+			// TODO Auto-generated method stub
+			//Load stock quotes
+			String result = (String) msg.obj;
+			
+			try
+			{	
+				JSONObject jsonObject = new JSONObject(result);
+				JSONObject listObject = jsonObject.getJSONObject("list");
+				JSONArray resourcesObject = listObject.getJSONArray("resources");
+				JSONObject resObject = resourcesObject.getJSONObject(0);
+				JSONObject resource = resObject.getJSONObject("resource");
+				JSONObject fieldsObject = resource.getJSONObject("fields");
+				/*name = fieldsObject.getString("name");
+				symbol = fieldsObject.getString("symbol");
+				price = fieldsObject.getString("price");*/
+				//volume = classObject.getString("volume");
+				stockSymbol.setText("Stock symbol: "+ fieldsObject.getString("symbol") );
+				stockPrice.setText("Stock Price is: "+fieldsObject.getString("price"));
+				stockName.setText("Stock Name: "+fieldsObject.getString("name"));
+				Log.i(INPUT_SERVICE, msg.obj.toString());
+			}catch(JSONException e)
+			{
+				e.printStackTrace();
+			}
+						
+			return false;
+		}
+	});
+	
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -60,136 +94,97 @@ public class MainActivity extends ActionBarActivity {
 		
 		getQuotes = (Button) findViewById(R.id.get_Quotes);
 		editTextStockSymbol = (EditText) findViewById(R.id.editText_StockSymbol);
+		stockName = (TextView) findViewById(R.id.stock_Name);
+		stockSymbol = (TextView) findViewById(R.id.stock_symbol);
+		stockPrice = (TextView) findViewById(R.id.stock_Price);
 		
-		final Handler showContent = new Handler(new Handler.Callback() {
-			
-			@Override
-			public boolean handleMessage(Message msg) {
-				// TODO Auto-generated method stub
-				//Load stock quotes
-				String result = (String) msg.obj;
-				
-				try
-				{	
-					JSONObject jsonObject = new JSONObject(result);
-					JSONObject listObject = jsonObject.getJSONObject("list");
-					JSONArray resourcesObject = listObject.getJSONArray("resources");
-					JSONObject resObject = resourcesObject.getJSONObject(0);
-					JSONObject resource = resObject.getJSONObject("resource");
-					JSONObject fieldsObject = resource.getJSONObject("fields");
-					name = fieldsObject.getString("name");
-					symbol = fieldsObject.getString("symbol");
-					price = fieldsObject.getString("price");
-					//volume = classObject.getString("volume");
-				}catch(JSONException e)
-				{
-					e.printStackTrace();
-				}
-				String[] strarr ={ name, symbol, price};
-				
-				stockName = (TextView) findViewById(R.id.stock_Name);
-				stockSymbol = (TextView) findViewById(R.id.stock_symbol);
-				stockPrice = (TextView) findViewById(R.id.stock_Price);
-				stockSymbol.setText("Stock symbol: "+strarr[1]);
-				stockPrice.setText("Stock Price is: "+strarr[2]);
-				stockName.setText("Stock Name: "+strarr[0]);
-				Log.e(INPUT_SERVICE, msg.obj.toString());
-				return false;
-			}
-		});
-		
-
 		getQuotes.setOnClickListener(new View.OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				final String stockSym = editTextStockSymbol.getText().toString();
-				buttonClicked++;
+				
+				 
+
 				if(isNetworkActive())
-				{
-					
-						t = new Thread() {
-							@Override
-							public void run()
+				{					
+					t = new Thread() {
+						@Override
+						public void run()
+						{
+							while(true)
 							{
-								while(true)
+								String result;
+								InputStream inputStream = null;
+								String stockSym = editTextStockSymbol.getText().toString();
+								
+								String url_selected = "http://finance.yahoo.com/webservice/v1/symbols/"+stockSym+"/quote?format=json";
+								ArrayList<NameValuePair> param = new ArrayList<NameValuePair>();
+								//InputStream inputStream = null;
+								try
 								{
-									String result;
-									if(symbol != null)
-									{
-										if(!symbol.equalsIgnoreCase(editTextStockSymbol.getText().toString()))
-										{
-											
-											symbol = "";
-											name="";
-											price="";
-											
-										}
-									}
-									result = stockJSon(stockSym);	
-									Message msg = Message.obtain();
-									msg.obj = result;
+									HttpClient httpClient = new DefaultHttpClient(new BasicHttpParams());				
+									HttpGet httpGet = new HttpGet(url_selected);
+									httpGet.setHeader("Content-type", "application/json");				
+									HttpResponse httpResponse = httpClient.execute(httpGet);
+									HttpEntity httpEntity = httpResponse.getEntity();
 									
-									showContent.sendMessage(msg);
+									inputStream = httpEntity.getContent();
+									Log.v("test", httpEntity.getContent().toString());
+								}catch (UnsupportedEncodingException e1)
+								{
+									Log.e("UnsupportedEncodingException",e1.toString());
+									e1.printStackTrace();
 								}
+								catch(ClientProtocolException e2)
+								{
+									Log.e("ClientProtocolException",e2.toString());
+									e2.printStackTrace();
+								}
+								catch(IllegalStateException e3)
+								{
+									Log.e("IllegalStateException",e3.toString());
+									e3.printStackTrace();
+								}
+								catch(IOException e4)
+								{
+									Log.e("IOException",e4.toString());
+									e4.printStackTrace();
+								}
+								
+								try
+								{
+									
+									BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"), 8);
+									StringBuilder builderString = new StringBuilder();
+									String line = null;
+									while((line=reader.readLine()) != null)
+									{
+										builderString.append(line + "\n");
+									}
+									inputStream.close();
+									result = builderString.toString();
+									
+								}catch(Exception e){
+									Log.e("StringBuilding and BufferedReader", "Error converting" + e.toString());
+								}
+								result = stockJSon(stockSym);	
+								Message msg = Message.obtain();
+								msg.obj = result;
+									
+								showContent.sendMessage(msg);
 							}
-						};
-						//new MyAsyncTask().execute();
+						}
+					};
+					//new MyAsyncTask().execute();
 						
-						t.start();
-						try {
+					t.start();
+					try {
 							Thread.sleep(10000);
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-					
-						/*
-						if(t != null)
-						{   //check if thread is new or already running
-							if(t.isAlive() && t.getState() == Thread.State.NEW)
-							{
-								Log.i("Thread State", "Thread alive and running");
-								if(symbol.equalsIgnoreCase(editTextStockSymbol.getText().toString()))
-								{
-									//t.setName(symbol);
-									t.start();
-									try {
-										Thread.sleep(1000);
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-								}
-								else
-								{
-									symbol = editTextStockSymbol.getText().toString();
-									//t.setName(symbol);
-									t.start();
-									try {
-										Thread.sleep(1000);
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-								}
-							}*/
-							/*else
-							{
-								symbol = editTextStockSymbol.getText().toString();
-								
-								t.run();
-								try {
-										Thread.sleep(1000);
-									} catch (InterruptedException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									}
-							}
-*/
-			//}
-					
 					}
 			}
 		});
