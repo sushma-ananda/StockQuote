@@ -67,7 +67,26 @@ public class MainActivity extends ActionBarActivity {
 			public boolean handleMessage(Message msg) {
 				// TODO Auto-generated method stub
 				//Load stock quotes
-				String[] strarr = (String[]) msg.obj;
+				String result = (String) msg.obj;
+				
+				try
+				{	
+					JSONObject jsonObject = new JSONObject(result);
+					JSONObject listObject = jsonObject.getJSONObject("list");
+					JSONArray resourcesObject = listObject.getJSONArray("resources");
+					JSONObject resObject = resourcesObject.getJSONObject(0);
+					JSONObject resource = resObject.getJSONObject("resource");
+					JSONObject fieldsObject = resource.getJSONObject("fields");
+					name = fieldsObject.getString("name");
+					symbol = fieldsObject.getString("symbol");
+					price = fieldsObject.getString("price");
+					//volume = classObject.getString("volume");
+				}catch(JSONException e)
+				{
+					e.printStackTrace();
+				}
+				String[] strarr ={ name, symbol, price};
+				
 				stockName = (TextView) findViewById(R.id.stock_Name);
 				stockSymbol = (TextView) findViewById(R.id.stock_symbol);
 				stockPrice = (TextView) findViewById(R.id.stock_Price);
@@ -96,18 +115,21 @@ public class MainActivity extends ActionBarActivity {
 							{
 								while(true)
 								{
-									String[] strarr;
-									if(!symbol.equalsIgnoreCase(editTextStockSymbol.getText().toString()))
+									String result;
+									if(symbol != null)
 									{
-										
-										symbol = "";
-										name="";
-										price="";
-										
+										if(!symbol.equalsIgnoreCase(editTextStockSymbol.getText().toString()))
+										{
+											
+											symbol = "";
+											name="";
+											price="";
+											
+										}
 									}
-									strarr = stockJSon(stockSym);	
+									result = stockJSon(stockSym);	
 									Message msg = Message.obtain();
-									msg.obj = strarr;
+									msg.obj = result;
 									
 									showContent.sendMessage(msg);
 								}
@@ -174,7 +196,7 @@ public class MainActivity extends ActionBarActivity {
 			
 	}
 	
-	public String[] stockJSon(String stocksym)
+	public String stockJSon(String stocksym)
 	{
 		InputStream inputStream = null;
 		String result = "";
@@ -229,24 +251,8 @@ public class MainActivity extends ActionBarActivity {
 		}catch(Exception e){
 			Log.e("StringBuilding and BufferedReader", "Error converting" + e.toString());
 		}
-		try
-		{	
-			JSONObject jsonObject = new JSONObject(result);
-			JSONObject listObject = jsonObject.getJSONObject("list");
-			JSONArray resourcesObject = listObject.getJSONArray("resources");
-			JSONObject resObject = resourcesObject.getJSONObject(0);
-			JSONObject resource = resObject.getJSONObject("resource");
-			JSONObject fieldsObject = resource.getJSONObject("fields");
-			name = fieldsObject.getString("name");
-			symbol = fieldsObject.getString("symbol");
-			price = fieldsObject.getString("price");
-			//volume = classObject.getString("volume");
-		}catch(JSONException e)
-		{
-			e.printStackTrace();
-		}
-		String[] strarr ={ name, symbol, price};
-		return strarr;
+		
+		return result;
 	}
 
 private class MyAsyncTask extends AsyncTask<String, String, String> {
